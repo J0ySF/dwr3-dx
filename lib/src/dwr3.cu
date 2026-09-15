@@ -1,52 +1,48 @@
-#include <dwr3/dwr3.h>
+#include <dwr3/dwr3.hpp>
+#include <stdexcept>
 
-// Compie-time assertions //////////////////////////////////////////////////////////////////////////////////////////////
+namespace dwr3 {
+    // Compie-time assertions //////////////////////////////////////////////////////////////////////////////////////////
 
-// Check that dwr3_sample_position_t can be correctly copied to a float4 (with v remapped to w) for use in CUDA kernels
-static_assert(std::is_standard_layout_v<dwr3_sample_position_t> == true);
-static_assert(std::is_standard_layout_v<float4> == true);
-static_assert(sizeof(dwr3_sample_position_t) == sizeof(float4));
-static_assert(alignof(dwr3_sample_position_t) == alignof(float4));
-static_assert(offsetof(dwr3_sample_position_t, x) == offsetof(float4, x));
-static_assert(offsetof(dwr3_sample_position_t, y) == offsetof(float4, y));
-static_assert(offsetof(dwr3_sample_position_t, z) == offsetof(float4, z));
-static_assert(offsetof(dwr3_sample_position_t, v) == offsetof(float4, w));
+    // Check that sample_position_value can be correctly copied to a float4 (with v remapped to w) for use in CUDA kernels
+    static_assert(std::is_standard_layout_v<sample_position_value> == true);
+    static_assert(std::is_standard_layout_v<float4> == true);
+    static_assert(sizeof(sample_position_value) == sizeof(float4));
+    static_assert(alignof(sample_position_value) == alignof(float4));
+    static_assert(offsetof(sample_position_value, x) == offsetof(float4, x));
+    static_assert(offsetof(sample_position_value, y) == offsetof(float4, y));
+    static_assert(offsetof(sample_position_value, z) == offsetof(float4, z));
+    static_assert(offsetof(sample_position_value, v) == offsetof(float4, w));
 
-// Entrypoints /////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Entrypoint class ////////////////////////////////////////////////////////////////////////////////////////////////
 
-dwr3_error_t dwr3_create(void **instance, dwr3_instance_info_t *instance_info, float size[3],
-                         const dwr3_boundary_reflectance_filter_t *const boundary_reflectance_filters[6],
-                         int sample_rate, unsigned int buffer_size, unsigned int input_count_limit,
-                         unsigned int output_count_limit) {
-    *instance = nullptr;
-    if (instance_info) *instance_info = {};
+    dwr3::dwr3(
+        float size[3], const boundary_reflectance_filter_coefficients *const boundary_coefficients[6],
+        int sample_rate, int buffer_size, int input_count_limit, int output_count_limit) {
+        throw std::runtime_error("Not implemented yet");
+    }
 
-    // TODO: implement
-    return DWR3_ERROR_UNKNOWN;
-}
+    dwr3::~dwr3() = default;
 
-dwr3_error_t dwr3_destroy(void *instance) {
-    // TODO: implement
-    return DWR3_ERROR_UNKNOWN;
-}
+    instance_info dwr3::info() const {
+        throw std::runtime_error("Not implemented yet");
+    }
 
-dwr3_error_t dwr3_reset(void *instance) {
-    // TODO: implement
-    return DWR3_ERROR_UNKNOWN;
-}
+    void dwr3::reset() const {
+        throw std::runtime_error("Not implemented yet");
+    }
 
-dwr3_error_t dwr3_processing_start(void *instance, unsigned int input_count,
-                                   const dwr3_sample_position_t *const *input_samples_positions,
-                                   unsigned int output_count, const dwr3_sample_position_t *const *output_positions) {
-    // TODO: implement
-    return DWR3_ERROR_UNKNOWN;
-}
+    void dwr3::processing_start(
+        const int input_count, const sample_position_value *const *input_samples_positions,
+        const int output_count, const sample_position_value *const *output_positions) const {
+        throw std::runtime_error("Not implemented yet");
+    }
 
-int dwr3_processing_started(void *instance) {
-    return 0;
-}
+    bool dwr3::processing_started() const {
+        throw std::runtime_error("Not implemented yet");
+    }
 
-dwr3_error_t dwr3_processing_retrieve(void *instance, dwr3_sample_position_t *const *output_samples) {
-    // TODO: implement
-    return DWR3_ERROR_UNKNOWN;
+    void dwr3::processing_retrieve(float *const *output_samples) const {
+        throw std::runtime_error("Not implemented yet");
+    }
 }
