@@ -1,6 +1,8 @@
 #ifndef DWR3_HPP
 #define DWR3_HPP
 
+#include <stdexcept>
+
 #ifndef DWR3_BOUNDARY_FILTER_ORDER
 /// The order of the Infinite Impulse Response boundary reflectance filters used by dwr3
 #define DWR3_BOUNDARY_FILTER_ORDER 8
@@ -40,7 +42,6 @@ namespace dwr3 {
         float v;
     };
 
-    // TODO: remove copy and implement move constructor
     /// Class that performs a Finite Difference Time Domain acoustic simulation with moving acoustic sources (inputs) and receivers (outputs).
     /// The simulation is processed over blocks of discrete samples, starting with a processing_start call, which begins
     /// the asynchronous computation on a CUDA enabled device. After calling processing_start, processing_retrieve is called
@@ -48,8 +49,23 @@ namespace dwr3 {
     /// Refer to the single methods for more information.
     /// @note This class is not thread safe.
     /// @note In the case of unrecoverable runtime errors, this class throws exceptions and turns any further calls to its functions into no-ops.
+    /// Errors related to incorrect processing_start/processing_retrieve call order are signaled with processing_state_error exceptions,
+    /// after which the instance state can still be used normally.
     class dwr3 {
     public:
+        /// Exception thrown when processing_start and processing_retrieve are not called with the ordering rules specified
+        struct processing_state_error : std::logic_error {
+            using std::logic_error::logic_error;
+        };
+
+        // Delete copy constructors
+        dwr3(const dwr3 &) = delete;
+
+        // Delete copy constructors
+        dwr3 &operator=(const dwr3 &) = delete;;
+
+        // TODO: implement move constructors
+
         /**
          * Creates a rectangular simulation instance using the SLF scheme from
          * K. Kowalczyk and M. van Walstijn, "Room Acoustics Simulation Using 3-D Compact Explicit FDTD Schemes," in
@@ -66,8 +82,8 @@ namespace dwr3 {
          * @invariant each element in boundary_coefficients must be not NULL
          * @throws std::exception in the case of failure
          */
-        dwr3(float size[3], const boundary_reflectance_filter_coefficients *const boundary_coefficients[6],
-             int sample_rate, int buffer_size, int input_count_limit, int output_count_limit);
+        explicit dwr3(float size[3], const boundary_reflectance_filter_coefficients *const boundary_coefficients[6],
+                      int sample_rate, int buffer_size, int input_count_limit, int output_count_limit);
 
         /**
          * @note Waits for any asynchronous processing caused by processing_start to terminate
