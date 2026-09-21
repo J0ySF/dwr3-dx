@@ -1,21 +1,21 @@
 #ifndef DWR3_HPP
 #define DWR3_HPP
 
-#ifndef DWR3_BUFFER_BASE_SIZE
-/// Internal buffer base size used by dwr3
-#define DWR3_BUFFER_BASE_SIZE 64
-#endif
-
 #ifndef DWR3_BOUNDARY_FILTER_ORDER
 /// The order of the Infinite Impulse Response boundary reflectance filters used by dwr3
 #define DWR3_BOUNDARY_FILTER_ORDER 8
 #endif
 
+#ifndef DWR3_BUFFER_BASE_SIZE
+/// Internal buffer base size used by dwr3
+#define DWR3_BUFFER_BASE_SIZE 64
+#endif
+
 namespace dwr3 {
-    /// Base buffer size used in the implementation (see dwr3::dwr3's invariants)
-    constexpr int buffer_base_size = DWR3_BUFFER_BASE_SIZE;
-    /// Boundary filters order used in the implementation (see dwr3::dwr3's invariants)
+    /// Boundary filters order used in the implementation
     constexpr int boundary_filter_order = DWR3_BOUNDARY_FILTER_ORDER;
+    /// Base buffer size used in the implementation, must be defined as equal or a multiple of boundary_filter_order
+    constexpr int buffer_base_size = DWR3_BUFFER_BASE_SIZE;
 
     /// Instance information
     struct instance_info {
@@ -40,20 +40,29 @@ namespace dwr3 {
         float v;
     };
 
-    /// @note This class is not thread safe
-    /// @todo Expand, explain the processing_started -> processing_retrieve loop here
-    /// @todo Add information on the state the class is left in after exceptions
+    // TODO: remove copy and implement move constructor
+    /// Class that performs a Finite Difference Time Domain acoustic simulation with moving acoustic sources (inputs) and receivers (outputs).
+    /// The simulation is processed over blocks of discrete samples, starting with a processing_start call, which begins
+    /// the asynchronous computation on a CUDA enabled device. After calling processing_start, processing_retrieve is called
+    /// to read the results from the asynchronous computation, this enables processing_start to be callable again.
+    /// Refer to the single methods for more information.
+    /// @note This class is not thread safe.
+    /// @note In the case of unrecoverable runtime errors, this class throws exceptions and turns any further calls to its functions into no-ops.
     class dwr3 {
     public:
         /**
+         * Creates a rectangular simulation instance using the SLF scheme from
+         * K. Kowalczyk and M. van Walstijn, "Room Acoustics Simulation Using 3-D Compact Explicit FDTD Schemes," in
+         * IEEE Transactions on Audio, Speech, and Language Processing, vol. 19, no. 1, pp. 34-46, Jan. 2011, doi: 10.1109/TASL.2010.2045179.
          * @param[in] size Physical size on the x, y and z axes
-         * @param[in] boundary_coefficients Boundary reflectance filters coefficients for boundaries in order x-, x+, y-, y+, z, -z+
+         * @param[in] boundary_coefficients Boundary reflectance filters coefficients for boundaries in order {x-, x+, y-, y+, z, -z+}
          * @param[in] sample_rate Audio sample rate
          * @param[in] buffer_size Buffer size used during processing calls
          * @param[in] input_count_limit Maximum supported amount of inputs
          * @param[in] output_count_limit Maximum supported amount of outputs
          * @invariant sample_rate, buffer_size, input_count_limit, output_count_limit must be greater than zero
-         * @invariant todo further constraints related to buffer_size
+         * @invariant buffer_size must be equal or a multiple of dwr3::buffer_base_size
+         * @invariant buffer_size must be equal or a multiple of dwr3::boundary_filter_order
          * @invariant each element in boundary_coefficients must be not NULL
          * @throws std::exception in the case of failure
          */
@@ -65,7 +74,7 @@ namespace dwr3 {
          */
         ~dwr3() noexcept;
 
-        [[nodiscard]] instance_info info() const;
+        [[nodiscard]] instance_info info() const noexcept;
 
         /**
          * Resets the instance's state to it's starting state
@@ -93,9 +102,8 @@ namespace dwr3 {
 
         /**
          * @return true if processing_start was successfully called without a consecutive processing_retrieve call, otherwise returns false
-         * @throws std::exception in the case of failure
          */
-        [[nodiscard]] bool processing_started() const;
+        [[nodiscard]] bool processing_started() const noexcept;
 
         /**
          * Waits for the asynchronous processing started by a processing_start call to terminate, then provides buffer_size output samples for each of the output_count outputs (see dwr3::processing_start's arguments)
