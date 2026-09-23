@@ -13,6 +13,14 @@
 #define DWR3_BUFFER_BASE_SIZE 64
 #endif
 
+#define DWR3_BOUNDARY_FILTER_TYPE_REGULAR 0
+#define DWR3_BOUNDARY_FILTER_TYPE_HIGHPASS 1
+#define DWR3_BOUNDARY_FILTER_TYPE_BANDPASS 2
+#ifndef DWR3_BOUNDARY_FILTER_TYPE
+/// The boundary type used for boundary filters, see scripts/boundary_reflectance_filters_coefficients_generator.m
+#define DWR3_BOUNDARY_FILTER_TYPE DWR3_BOUNDARY_FILTER_TYPE_BANDPASS
+#endif
+
 namespace dwr3 {
     /// Boundary filters order used in the implementation
     constexpr int boundary_filter_order = DWR3_BOUNDARY_FILTER_ORDER;
@@ -133,6 +141,9 @@ namespace dwr3 {
         /// Instance handle
         void *instance{};
     };
+
+    // ReSharper disable once CppUnusedIncludeDirective
+#include <dwr3/gen/boundary_reflectance_filters.hpp>
 }
 
 #endif //DWR3_HPP
