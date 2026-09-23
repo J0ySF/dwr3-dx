@@ -8,8 +8,10 @@ enum class boundary_reflectance_filter_material {
     concrete,
 };
 
+/** Converts from a string to one of the @p boundary_reflectance_filter_material enum's values @throw std::exception if no match is found */
 boundary_reflectance_filter_material boundary_reflectance_filter_material_from_string(const std::string &str);
 
+/** Returns a pointer to a static @p boundary_reflectance_filter_coefficients instance, fitted from absorption coefficients @note the returned instance depends on the @p DWR3_BOUNDARY_FILTER_TYPE definition @throw std::runtime_error if the @p sample_rate is not supported @throw std::logic_error for invalid enum values */
 const boundary_reflectance_filter_coefficients *boundary_reflectance_filter_material_to_coefficients(boundary_reflectance_filter_material material, int sample_rate);
 
 #endif //DWR3_BOUNDARY_FILTERS_HPP

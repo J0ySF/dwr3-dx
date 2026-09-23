@@ -105,7 +105,9 @@ for material_name = materials_names
     fprintf(fid, '\t%s,\n', material_name);
 end
 fprintf(fid, '};\n\n');
+fprintf(fid, "/** Converts from a string to one of the @p boundary_reflectance_filter_material enum's values @throw std::exception if no match is found */\n");
 fprintf(fid, 'boundary_reflectance_filter_material boundary_reflectance_filter_material_from_string(const std::string &str);\n\n');
+fprintf(fid, "/** Returns a pointer to a static @p boundary_reflectance_filter_coefficients instance, fitted from absorption coefficients @note the returned instance depends on the @p DWR3_BOUNDARY_FILTER_TYPE definition @throw std::runtime_error if the @p sample_rate is not supported @throw std::logic_error for invalid enum values */\n");
 fprintf(fid, 'const boundary_reflectance_filter_coefficients *boundary_reflectance_filter_material_to_coefficients(boundary_reflectance_filter_material material, int sample_rate);\n\n');
 fprintf(fid, '#endif //DWR3_BOUNDARY_FILTERS_HPP\n');
 fclose(fid);
@@ -131,7 +133,7 @@ for type = 0:2
         for i = 1:materials_count
             for fs = fs_s
                 fprintf(fid, 'static constexpr dwr3::boundary_reflectance_filter_coefficients %s_%i = {', materials_names(i), fs);
-                [b,a] = fit_IIR_R(fs, materials_freqs, materials_alpha(i,:), order, apply_bandpass, false, false);
+                [b,a] = fit_IIR_R(fs, materials_freqs, materials_alpha(i,:), order, type, false, false);
                 fprintf(fid, "{%s},{%s}", strip(sprintf("%.16f,", b), ","), strip(sprintf("%.16f,", a), ","));
                 fprintf(fid, '};\n');
             end
