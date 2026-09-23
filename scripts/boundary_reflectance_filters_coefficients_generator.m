@@ -15,12 +15,13 @@ function [b,a] = fit_IIR_R(fs, freqs, alpha, order, type, plot_original, plot_fi
         error("order too low for use with specified type")
     end
 
-    freqs = [0, freqs];
+    freqs = [0, freqs]; % Add one point at 0 and one at Fs/2
     freqs = [freqs, fs/2];
-    norm_freqs = freqs/fs*2;
-    alpha = [alpha, alpha(length(alpha))];
+    norm_freqs = freqs/fs*2; % then normalize in the [0,1] range
+
+    alpha = [alpha, alpha(length(alpha))]; % Duplicate the first and last entry in alpha
     alpha = [alpha(1), alpha];
-    R = sqrt(1.0 - alpha);
+    R = sqrt(1.0 - alpha); % then convert to reflectance
 
     order = order - type; % Decrease the order to get the correct final order after concatenation
     if order == 0
