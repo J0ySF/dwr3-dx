@@ -143,9 +143,9 @@ for type = 0:2
     end
     fprintf(fid, '#endif\n\n');
 end
-fprintf(fid, 'dwr3::boundary_reflectance_filter_material boundary_reflectance_filter_material_from_string(const std::string &str) {\n');
+fprintf(fid, 'dwr3::boundary_reflectance_filter_material dwr3::boundary_reflectance_filter_material_from_string(const std::string &str) {\n');
 for i = 1:materials_count
-    fprintf(fid, '\tif (str == "%s") return dwr3::boundary_reflectance_filter_material::%s;\n', material_name(i), material_name(i));
+    fprintf(fid, '\tif (str == "%s") return boundary_reflectance_filter_material::%s;\n', material_name(i), material_name(i));
 end
 fprintf(fid, '\tthrow std::logic_error("Unknown material string \\"" + str + "\\"");\n');
 fprintf(fid, '}\n\n');

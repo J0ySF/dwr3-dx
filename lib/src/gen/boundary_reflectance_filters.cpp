@@ -165,10 +165,10 @@ static constexpr dwr3::boundary_reflectance_filter_coefficients concrete_48000 =
 #endif
 #endif
 
-dwr3::boundary_reflectance_filter_material boundary_reflectance_filter_material_from_string(const std::string &str) {
-	if (str == "plaster") return dwr3::boundary_reflectance_filter_material::plaster;
-	if (str == "wood") return dwr3::boundary_reflectance_filter_material::wood;
-	if (str == "concrete") return dwr3::boundary_reflectance_filter_material::concrete;
+dwr3::boundary_reflectance_filter_material dwr3::boundary_reflectance_filter_material_from_string(const std::string &str) {
+	if (str == "plaster") return boundary_reflectance_filter_material::plaster;
+	if (str == "wood") return boundary_reflectance_filter_material::wood;
+	if (str == "concrete") return boundary_reflectance_filter_material::concrete;
 	throw std::logic_error("Unknown material string \"" + str + "\"");
 }
 
