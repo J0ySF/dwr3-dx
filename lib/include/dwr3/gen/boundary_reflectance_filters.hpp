@@ -2,6 +2,16 @@
 #ifndef DWR3_BOUNDARY_FILTERS_HPP
 #define DWR3_BOUNDARY_FILTERS_HPP
 
+/** Filter designs for which precomputed boundary_reflectance_filter_coefficients are provided **/
+enum class boundary_reflectance_filter_type {
+    /** Direct result of fitting reflectance coefficients **/
+    regular,
+    /** Fitted filter concatenated with a highpass filter, helps with mitigating low frequency errors in the propagation medium **/
+    concat_highpass,
+    /** Fitted filter concatenated with a bandpass filter, helps with mitigating both low and high frequency errors in the propagation medium **/
+    concat_bandpass
+};
+
 enum class boundary_reflectance_filter_material {
     plaster,
     wood,
@@ -12,6 +22,6 @@ enum class boundary_reflectance_filter_material {
 boundary_reflectance_filter_material boundary_reflectance_filter_material_from_string(const std::string &str);
 
 /** Returns a pointer to a static @p boundary_reflectance_filter_coefficients instance, fitted from absorption coefficients @note the returned instance depends on the @p DWR3_BOUNDARY_FILTER_TYPE definition @throw std::runtime_error if the @p sample_rate is not supported @throw std::logic_error for invalid enum values */
-const boundary_reflectance_filter_coefficients *boundary_reflectance_filter_material_to_coefficients(boundary_reflectance_filter_material material, int sample_rate);
+const boundary_reflectance_filter_coefficients *boundary_reflectance_filter_material_to_coefficients(boundary_reflectance_filter_material material, int sample_rate, boundary_reflectance_filter_type type);
 
 #endif //DWR3_BOUNDARY_FILTERS_HPP
