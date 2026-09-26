@@ -295,7 +295,7 @@ void dwr3::input_output::prepare_iteration_transfer_h2d(
 
 void dwr3::input_output::transfer_d2h(cudaStream_t stream) const {
     CUDA_THROW_ON_ERROR(cudaMemcpyAsync(alloc_layout_h.output_samples, alloc_layout_d.output_samples, alloc_d2h_size,
-        cudaMemcpyHostToDevice, stream));
+        cudaMemcpyDeviceToHost, stream));
 }
 
 void dwr3::input_output::return_output_samples(float *const *output_samples) const noexcept {
