@@ -627,7 +627,8 @@ static dwr3::change_of_basis select_change_of_basis(T x, T y, T z) {
 
 dwr3::propagation_medium_kv_2009::propagation_medium_kv_2009(
     instance_info &info, const float size[3], const boundary_reflectance_filter_coefficients *const
-    boundary_reflectance_filters[6], const int sample_rate, const int buffer_size) {
+    boundary_reflectance_filters[6], const int sample_rate, const int buffer_size, const bool xy_plane_output_enable,
+    const float xy_plane_output_z_axis_position) {
     static_assert(buffer_base_size % boundary_filter_order == 0);
     if (buffer_size % boundary_filter_order != 0)
         throw std::logic_error(
@@ -635,10 +636,12 @@ dwr3::propagation_medium_kv_2009::propagation_medium_kv_2009(
     if (sample_rate <= 0) throw std::logic_error("sample_rate is less or equal than zero");
 
     // Compute and apply change of basis
-    p_info_.change_of_basis = select_change_of_basis(size[0], size[1], size[2]);
+    // (only if xy_plane_output_enable is false, since otherwise this output might get also rotated)
+    if (!xy_plane_output_enable) p_info_.change_of_basis = select_change_of_basis(size[0], size[1], size[2]);
+    else p_info_.change_of_basis = change_of_basis::xyz;
     float size_[3] = {size[0], size[1], size[2]};
     apply_change_of_basis(size_[0], size_[1], size_[2], p_info_.change_of_basis);
-    const boundary_reflectance_filter_coefficients * boundary_reflectance_filters_[6] = {
+    const boundary_reflectance_filter_coefficients *boundary_reflectance_filters_[6] = {
         boundary_reflectance_filters[0], boundary_reflectance_filters[1], boundary_reflectance_filters[2],
         boundary_reflectance_filters[3], boundary_reflectance_filters[4], boundary_reflectance_filters[5]
     };
@@ -676,6 +679,18 @@ dwr3::propagation_medium_kv_2009::propagation_medium_kv_2009(
             b_state[i].init(boundary_reflectance_filters_[i], side_area[i >> 1]);
             info.pm_memory_size += side_area[i >> 1];
         }
+
+        // Handle optional xy plane output
+        if (xy_plane_output_enable) {
+            info.p_xy_plane_row_stride = p_info_.alloc_stride_x;
+            xy_plane_output_data_size = p_info_.alloc_stride_x * p_info_.size[1] * sizeof(float);
+            CUDA_THROW_ON_ERROR(
+                cudaHostAlloc(&xy_plane_output_data_alloc, xy_plane_output_data_size, cudaHostAllocDefault));
+            xy_plane_output_z_axis_position_node = // Plane position in node units, clamped
+                    min(max(static_cast<int>(roundf(xy_plane_output_z_axis_position * p_info_.nodes_per_meter)), 0),
+                        p_info_.size[2] - 1);
+        }
+
         reset();
     } catch (const std::exception &) {
         propagation_medium_kv_2009::~propagation_medium_kv_2009();
@@ -686,10 +701,21 @@ dwr3::propagation_medium_kv_2009::propagation_medium_kv_2009(
 dwr3::propagation_medium_kv_2009::~propagation_medium_kv_2009() noexcept {
     for (const auto &p: p_alloc_d) cudaFree(p);
     for (auto &b: b_state) b.release();
+    cudaFree(xy_plane_output_data_alloc);
 }
 
 void dwr3::propagation_medium_kv_2009::reset() {
     for (const auto &p: p_alloc_d)
         CUDA_THROW_ON_ERROR(cudaMemset(p, 0, p_alloc_size));
     for (const auto &b: b_state) b.reset();
+    CUDA_THROW_ON_ERROR(cudaMemset(xy_plane_output_data_alloc, 0, xy_plane_output_data_size));
 }
+
+void dwr3::propagation_medium_kv_2009::copy_latest_xy_plane_output_data(cudaStream_t stream) {
+    if (xy_plane_output_data_alloc == nullptr) return;
+    CUDA_THROW_ON_ERROR(
+        cudaMemcpyAsync(xy_plane_output_data_alloc, p_alloc_d[0] + p_info_.alloc_stride_x * p_info_.size[1] *
+            xy_plane_output_z_axis_position_node, xy_plane_output_data_size, cudaMemcpyDeviceToHost, stream));
+}
+
+float *dwr3::propagation_medium_kv_2009::xy_plane_output_data() const noexcept { return xy_plane_output_data_alloc; }

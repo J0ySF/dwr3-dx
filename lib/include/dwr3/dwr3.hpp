@@ -6,6 +6,7 @@
  */
 
 #include <stdexcept>
+#include <cstdint>
 
 #ifndef DWR3_BOUNDARY_FILTER_ORDER
 /// The order of the Infinite Impulse Response boundary reflectance filters used by dwr3
@@ -29,6 +30,9 @@ namespace dwr3 {
     struct instance_info {
         /// Discrete nodes size used by the propagation medium model
         int node_size[3]{};
+        /// Stride between x-axis rows in the propagation medium's xy-plane slice provided as optional output data: data on each
+        /// row from node_size[0] to info.p_xy_plane_row_stride-1 consists of padding data which is not part of the propagation medium's state
+        int p_xy_plane_row_stride{};
         /// Number of discrete nodes per meter used by the propagation medium model
         float nodes_per_meter{};
         /// Bytes of CUDA device memory used by the propagation medium part of the simulation
@@ -110,15 +114,19 @@ namespace dwr3 {
          * @param[in] buffer_size Buffer size used during processing calls
          * @param[in] input_count_limit Maximum supported amount of inputs
          * @param[in] output_count_limit Maximum supported amount of outputs
+         * @param p_xy_plane_output_enable Enables the output of a xy-plane slice of propagation medium state
+         * @param p_xy_plane_output_z_axis_position Physical position on the z-axis of the xy-plane slice of propagation medium state
          * @note @p sample_rate, @p buffer_size, @p input_count_limit, @p output_count_limit must be greater than zero
          * @note @p buffer_size must be equal or a multiple of @p dwr3::buffer_base_size
          * @note @p buffer_size must be equal or a multiple of @p dwr3::boundary_filter_order
          * @note each element in @p boundary_coefficients must be not @p NULL
+         * @note If @p p_xy_plane_output_enable is set @p true , some optimizations are not enabled and additional memory transfer overhead occurs
          * @throws std::exception in the case of failure
          */
         explicit dwr3(
             float size[3], const boundary_reflectance_filter_coefficients *const boundary_coefficients[6],
-            int sample_rate, int buffer_size, int input_count_limit, int output_count_limit);
+            int sample_rate, int buffer_size, int input_count_limit, int output_count_limit,
+            bool p_xy_plane_output_enable = false, float p_xy_plane_output_z_axis_position = 0.0f);
 
         /**
          * @note Waits for any asynchronous processing caused by @p processing_start to terminate
@@ -169,10 +177,35 @@ namespace dwr3 {
         */
         void processing_retrieve(float *const *output_samples) const;
 
+        /**
+         * @return a pointer to a xy-plane slice of propagation medium state
+         * @note The pointer is NULL in the case where @p p_xy_plane_output_enable is @p false in the constructor
+         * @note If the pointer is not NULL, it points to an array of size @p instance_info.p_xy_plane_row_stride*instance_info.node_size[1]
+         * @note The memory pointed is only valid during this object's lifetime
+         * @note The pointed data is updated between the @p processing_started and @p processing_retrieve calls,
+         * so it can only be accessed without race conditions before @p processing_started or after @p processing_retrieve, not inbetween
+         * @note Refer to @p p_xy_plane_output_to_rgb_image_data 's implementation
+         * for an example of correct data access (ignoring padding data) and conversion to image data
+         */
+        [[nodiscard]] float *p_xy_plane_output() const noexcept;
+
     private:
         /// Instance handle
         void *instance{};
     };
+
+    /**
+     * Utility function to convert a @p dwr3 instance's @p p_xy_plane_output to image data. Fills @p image_data with RGB
+     * triplets, computed using the "Smooth Cool Warm" colormap from
+     * Moreland, Kenneth. "Diverging color maps for scientific visualization." International symposium on visual computing. Berlin, Heidelberg: Springer Berlin Heidelberg, 2009.
+     * @param p_xy_plane_output_data See @p dwr3::p_xy_plane_output
+     * @param image_data Array with @p info.node_size[0]*info.node_size[1]*3 elements
+     * @param info A @p dwr3 instance's info
+     * @param clipping_level The maximum magnitude represented in @p p_xy_plane_output_data , over which the colormap is clipped to the extreme values.
+     */
+    void p_xy_plane_output_to_rgb_image_data(
+        const float *p_xy_plane_output_data, uint8_t *image_data, const instance_info &info,
+        float clipping_level) noexcept;
 
     // ReSharper disable once CppUnusedIncludeDirective
 #include <dwr3/gen/boundary_reflectance_filters.hpp>

@@ -7,7 +7,8 @@ function(dwr3_variant suffix)
             ${CMAKE_SOURCE_DIR}/lib/src/gen/boundary_reflectance_filters.cpp
             ${CMAKE_SOURCE_DIR}/lib/src/common.cu
             ${CMAKE_SOURCE_DIR}/lib/src/input_output.cu
-            ${CMAKE_SOURCE_DIR}/lib/src/propagation_medium/kv_2009.cu)
+            ${CMAKE_SOURCE_DIR}/lib/src/propagation_medium/kv_2009.cu
+            ${CMAKE_SOURCE_DIR}/lib/src/colormap.cpp)
     set(DWR3_INCLUDE ${CMAKE_SOURCE_DIR}/lib/include)
     set(DWR3_VARIANT_NAME "dwr3${suffix}")
     add_library(${DWR3_VARIANT_NAME} STATIC ${DWR3_SOURCE})

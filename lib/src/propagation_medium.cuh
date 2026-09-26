@@ -46,6 +46,10 @@ namespace dwr3 {
         virtual ~propagation_medium() noexcept = default;
 
         virtual void reset() = 0;
+
+        virtual void copy_latest_xy_plane_output_data(cudaStream_t stream) = 0;
+
+        [[nodiscard]] virtual float *xy_plane_output_data() const noexcept = 0;
     };
 
     /// Implementation based on the (centered boundary conditions) SLF scheme from
@@ -105,6 +109,10 @@ namespace dwr3 {
 
         boundary_state b_state[6]{};
 
+        float *xy_plane_output_data_alloc{};
+        size_t xy_plane_output_data_size{};
+        int xy_plane_output_z_axis_position_node{};
+
     public:
         std::unique_ptr<graph_builder> create_graph_builder(
             cudaStream_t main_stream, stream_priorities stream_priorities) override;
@@ -118,11 +126,15 @@ namespace dwr3 {
         propagation_medium_kv_2009(
             instance_info &info, const float size[3],
             const boundary_reflectance_filter_coefficients *const boundary_reflectance_filters[6],
-            int sample_rate, int buffer_size);
+            int sample_rate, int buffer_size, bool xy_plane_output_enable, float xy_plane_output_z_axis_position);
 
         ~propagation_medium_kv_2009() noexcept override;
 
         void reset() override;
+
+        void copy_latest_xy_plane_output_data(cudaStream_t stream) override;
+
+        [[nodiscard]] float *xy_plane_output_data() const noexcept override;
     };
 }
 

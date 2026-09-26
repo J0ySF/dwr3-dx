@@ -3,6 +3,7 @@
 #include "common.cuh"
 #include "propagation_medium.cuh"
 #include "input_output.cuh"
+#include "colormap.hpp"
 
 namespace dwr3 {
     // Implementation class ////////////////////////////////////////////////////////////////////////////////////////////
@@ -89,6 +90,7 @@ namespace dwr3 {
             for (int i = 0; i < exec_subgraph_iterations; i++)
                 CUDA_THROW_ON_ERROR(cudaGraphLaunch(exec_graph.get(), exec_stream.get()));
             io.transfer_d2h(exec_stream.get());
+            pm->copy_latest_xy_plane_output_data(exec_stream.get());
             processing_started_flag = true;
         }
 
@@ -102,6 +104,8 @@ namespace dwr3 {
             processing_started_flag = false;
             io.return_output_samples(output_samples);
         }
+
+        [[nodiscard]] float *xy_plane_output() const noexcept { return pm->xy_plane_output_data(); }
     };
 
     // Public facing class /////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,10 +114,12 @@ namespace dwr3 {
 
     dwr3::dwr3(
         float size[3], const boundary_reflectance_filter_coefficients *const boundary_coefficients[6],
-        const int sample_rate, const int buffer_size, const int input_count_limit, const int output_count_limit) {
+        const int sample_rate, const int buffer_size, const int input_count_limit, const int output_count_limit,
+        const bool p_xy_plane_output_enable, const float p_xy_plane_output_z_axis_position) {
         instance_info info{};
         auto pm = std::make_unique<propagation_medium_kv_2009>(
-            info, size, boundary_coefficients, sample_rate, buffer_size);
+            info, size, boundary_coefficients, sample_rate, buffer_size,
+            p_xy_plane_output_enable, p_xy_plane_output_z_axis_position);
         instance = new implementation(info, std::move(pm), buffer_size, input_count_limit, output_count_limit);
     }
 
@@ -167,6 +173,35 @@ namespace dwr3 {
         } catch (const std::exception &) {
             dwr3::~dwr3();
             throw;
+        }
+    }
+
+    float *dwr3::p_xy_plane_output() const noexcept {
+        if (!instance) return nullptr;
+        return static_cast<implementation *>(instance)->xy_plane_output();
+    }
+
+    void p_xy_plane_output_to_rgb_image_data(
+        const float *p_xy_plane_output_data, uint8_t *image_data, const instance_info &info,
+        const float clipping_level) noexcept {
+        // Handle edge cases
+        if (image_data == nullptr) return;
+        if (p_xy_plane_output_data == nullptr) {
+            memset(image_data, 0, info.node_size[0] * info.node_size[1] * sizeof(uint8_t));
+            return;
+        }
+
+        for (int y = 0; y < info.node_size[1]; y++) {
+            for (int x = 0; x < info.node_size[0]; x++) {
+                // Get the value accounting for x-axis stride in memory, normalize with clipping level
+                const float n = p_xy_plane_output_data[x] / clipping_level;
+                const uint8_t *rgb = colormap_rgb_from_normalized(n);
+                image_data[0] = rgb[0];
+                image_data[1] = rgb[1];
+                image_data[2] = rgb[2];
+                image_data += 3;
+            }
+            p_xy_plane_output_data += info.p_xy_plane_row_stride; // Ignore the values on each row between info.node_size[0] and info.p_xy_plane_row_stride-1
         }
     }
 }
